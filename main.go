@@ -53,7 +53,6 @@ func login(baseURL, username, password string) (*response.LoginResponse, error) 
 	return &loginResp, nil
 }
 
-// Fetch log activity
 func fetchLogActivity(baseURL, token string, idEmployee int, month int, year int) (*response.LogActResponse, error) {
 
 	url := baseURL + "/log-act-detail-non-aj/table?sort=date|asc&idEmployee=" + strconv.Itoa(idEmployee) + "&months=" + strconv.Itoa(month) + "&years=" + strconv.Itoa(year)
@@ -208,8 +207,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Login error:", err)
 	}
-	fmt.Println("Login successful, token:", loginResp.IdToken)
-	fmt.Printf("User: %+v\n", loginResp.UserInfo)
+	// fmt.Println("Login successful, token:", loginResp.IdToken)
+	// fmt.Printf("User: %+v\n", loginResp.UserInfo)
 
 	var acts []response.Activity
 	for _, month := range months {
@@ -224,8 +223,9 @@ func main() {
 	maxDuration := 0
 	for _, a := range acts {
 		maxDuration = a.Duration
-		fmt.Printf("Tanggal: %s, Project: %s, Duration: %d, Activity: %s\n",
-			a.DateString, a.ProjectName, a.Duration, a.ActivityDetail)
+		break
+		// fmt.Printf("Tanggal: %s, Project: %s, Duration: %d, Activity: %s\n",
+		// 	a.DateString, a.ProjectName, a.Duration, a.ActivityDetail)
 	}
 	envMaxDuration := os.Getenv("MAX_DURATION")
 	if envMaxDuration != "" {
@@ -235,7 +235,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println("maxdur", maxDuration)
 	exportParam := ExportParam{
 		projectFilter:       projectName,
 		fileName:            resultFileName,
