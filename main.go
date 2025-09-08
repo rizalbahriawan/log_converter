@@ -15,13 +15,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/xuri/excelize/v2"
 )
 
 type ExportParam struct {
 	projectFilter       string
-	fileName            string
 	isRandomizeDuration bool
 	minDuration         int
 	maxDuration         int
@@ -54,10 +54,8 @@ func login(baseURL, username, password string) (*response.LoginResponse, error) 
 }
 
 func fetchLogActivity(baseURL, token string, idEmployee int, month int, year int) (*response.LogActResponse, error) {
-
 	url := baseURL + "/log-act-detail-non-aj/table?sort=date|asc&idEmployee=" + strconv.Itoa(idEmployee) + "&months=" + strconv.Itoa(month) + "&years=" + strconv.Itoa(year)
 
-	// Create request
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -80,9 +78,8 @@ func fetchLogActivity(baseURL, token string, idEmployee int, month int, year int
 	return &logResp, nil
 }
 
-func exportToExcel(activities []response.Activity, param ExportParam) error {
+func convertToExcel(activities []response.Activity, param ExportParam) (*excelize.File, error) {
 	projectFilter := param.projectFilter
-	fileName := param.fileName + ".xlsx"
 	isRandomizeDuration := param.isRandomizeDuration
 	minDuration := param.minDuration
 	maxDuration := param.maxDuration
@@ -91,7 +88,7 @@ func exportToExcel(activities []response.Activity, param ExportParam) error {
 	sheet := "Sheet1"
 	index, err := f.NewSheet(sheet)
 	if err != nil {
-		return err
+		return f, err
 	}
 
 	layout := "02-01-2006"
@@ -103,7 +100,7 @@ func exportToExcel(activities []response.Activity, param ExportParam) error {
 		}
 		t, err := time.Parse(layout, a.DateString)
 		if err != nil {
-			return fmt.Errorf("invalid date format: %s", a.DateString)
+			return f, fmt.Errorf("invalid date format: %s", a.DateString)
 		}
 		key := t.Format("2006-01")
 		grouped[key] = append(grouped[key], a)
@@ -118,8 +115,6 @@ func exportToExcel(activities []response.Activity, param ExportParam) error {
 	row := 1
 	for _, k := range keys {
 		t, _ := time.Parse("2006-01", k)
-		monthName := t.Format("January 2006")
-
 		indonesianMonths := map[time.Month]string{
 			time.January:   "Januari",
 			time.February:  "Februari",
@@ -134,7 +129,7 @@ func exportToExcel(activities []response.Activity, param ExportParam) error {
 			time.November:  "November",
 			time.December:  "Desember",
 		}
-		monthName = indonesianMonths[t.Month()]
+		monthName := indonesianMonths[t.Month()]
 
 		if row > 1 {
 			row++
@@ -167,52 +162,33 @@ func exportToExcel(activities []response.Activity, param ExportParam) error {
 	}
 
 	f.SetActiveSheet(index)
-
-	if err := f.SaveAs(fileName); err != nil {
-		return err
-	}
-	return nil
+	return f, nil
 }
 
-func main() {
-	err := godotenv.Load()
-	if err != nil {
+func handleConvertToExcel(c *gin.Context) {
+	var req request.LogConverterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 	baseURL := os.Getenv("BASE_URL")
-	username := os.Getenv("USERNAME_ESS")
-	password := os.Getenv("PASSWORD_ESS")
-	monthsExported := os.Getenv("MONTHS_EXPORTED")
-	var months []int
-	if err := json.Unmarshal([]byte(monthsExported), &months); err != nil {
-		log.Fatal(err)
-	}
-	year, err := strconv.Atoi(os.Getenv("YEAR_EXPORTED"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	projectName := os.Getenv("PROJECT_NAME_EXPORTED")
-	resultFileName := os.Getenv("RESULT_FILE_NAME")
-	randomizeDuration, err := strconv.ParseBool(os.Getenv("RANDOMIZE_DURATION"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	minDuration, err := strconv.Atoi(os.Getenv("MIN_DURATION"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Step 1: Login
-	loginResp, err := login(baseURL, username, password)
+	loginResp, err := login(baseURL, req.Username, req.Password)
 	if err != nil {
 		log.Fatal("Login error:", err)
 	}
-	// fmt.Println("Login successful, token:", loginResp.IdToken)
-	// fmt.Printf("User: %+v\n", loginResp.UserInfo)
 
 	var acts []response.Activity
-	for _, month := range months {
-		logResp, err := fetchLogActivity(baseURL, loginResp.IdToken, loginResp.UserInfo.EmployeeID, month, year)
+	for _, month := range req.Months {
+		logResp, err := fetchLogActivity(baseURL, loginResp.IdToken, loginResp.UserInfo.EmployeeID, month, req.Year)
 		if err != nil {
 			log.Fatal("Fetch error:", err)
 		}
@@ -224,27 +200,38 @@ func main() {
 	for _, a := range acts {
 		maxDuration = a.Duration
 		break
-		// fmt.Printf("Tanggal: %s, Project: %s, Duration: %d, Activity: %s\n",
-		// 	a.DateString, a.ProjectName, a.Duration, a.ActivityDetail)
 	}
-	envMaxDuration := os.Getenv("MAX_DURATION")
-	if envMaxDuration != "" {
-
-		maxDuration, err = strconv.Atoi(envMaxDuration)
-		if err != nil {
-			log.Fatal(err)
-		}
+	envMaxDuration := req.RandomizeLog.MaxDuration
+	if envMaxDuration != 0 {
+		maxDuration = envMaxDuration
 	}
 	exportParam := ExportParam{
-		projectFilter:       projectName,
-		fileName:            resultFileName,
-		isRandomizeDuration: randomizeDuration,
-		minDuration:         minDuration,
+		projectFilter:       req.ProjectName,
+		isRandomizeDuration: req.RandomizeLog.IsRandom,
+		minDuration:         req.RandomizeLog.MinDuration,
 		maxDuration:         maxDuration,
 	}
 
-	if err := exportToExcel(acts, exportParam); err != nil {
+	f, err := convertToExcel(acts, exportParam)
+	if err != nil {
 		log.Fatal("Excel export error:", err)
 	}
-	fmt.Println("Excel file created: " + resultFileName + ".xlsx")
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate excel"})
+		return
+	}
+	currentTime := time.Now()
+	timeString := currentTime.Format("2006-01-02_15-04-05")
+	fileName := `timesheet_` + timeString + `.xlsx`
+
+	c.Header("Content-Disposition", `attachment; filename=`+fileName)
+	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+func main() {
+	router := gin.Default()
+	router.POST("/convert", handleConvertToExcel)
+
+	router.Run(":8099")
 }
