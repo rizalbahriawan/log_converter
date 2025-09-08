@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log_cvt/dto/request"
 	"log_cvt/dto/response"
 	"math/rand"
@@ -178,28 +177,39 @@ func handleConvertToExcel(c *gin.Context) {
 	}
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	baseURL := os.Getenv("BASE_URL")
 	loginResp, err := login(baseURL, req.Username, req.Password)
 	if err != nil {
-		log.Fatal("Login error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	var acts []response.Activity
 	for _, month := range req.Months {
 		logResp, err := fetchLogActivity(baseURL, loginResp.IdToken, loginResp.UserInfo.EmployeeID, month, req.Year)
 		if err != nil {
-			log.Fatal("Fetch error:", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
 
 		acts = append(acts, logResp.Data...)
 	}
 
 	maxDuration := 0
+	found := false
 	for _, a := range acts {
 		maxDuration = a.Duration
-		break
+		if a.ProjectName == req.ProjectName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Project name " + req.ProjectName + " not found"})
+		return
 	}
 	envMaxDuration := req.RandomizeLog.MaxDuration
 	if envMaxDuration != 0 {
@@ -214,7 +224,8 @@ func handleConvertToExcel(c *gin.Context) {
 
 	f, err := convertToExcel(acts, exportParam)
 	if err != nil {
-		log.Fatal("Excel export error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error convert to excel": err.Error()})
+		return
 	}
 	var buf bytes.Buffer
 	if err := f.Write(&buf); err != nil {
