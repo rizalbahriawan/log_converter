@@ -89,6 +89,18 @@ func convertToExcel(activities []response.Activity, param ExportParam) (*exceliz
 	if err != nil {
 		return f, err
 	}
+	defaultFont := &excelize.Font{
+		Family: "Times New Roman",
+		Size:   12,
+	}
+	defaultStyle, err := f.NewStyle(&excelize.Style{
+		Font: defaultFont,
+	})
+	if err != nil {
+		return f, err
+	}
+
+	f.SetCellStyle(sheet, "A1", "Z1000", defaultStyle)
 
 	layout := "02-01-2006"
 	grouped := make(map[string][]response.Activity)
@@ -115,36 +127,75 @@ func convertToExcel(activities []response.Activity, param ExportParam) (*exceliz
 	for _, k := range keys {
 		t, _ := time.Parse("2006-01", k)
 		indonesianMonths := map[time.Month]string{
-			time.January:   "Januari",
-			time.February:  "Februari",
-			time.March:     "Maret",
-			time.April:     "April",
-			time.May:       "Mei",
-			time.June:      "Juni",
-			time.July:      "Juli",
-			time.August:    "Agustus",
-			time.September: "September",
-			time.October:   "Oktober",
-			time.November:  "November",
-			time.December:  "Desember",
+			time.January:   "JANUARI",
+			time.February:  "FEBRUARI",
+			time.March:     "MARET",
+			time.April:     "APRIL",
+			time.May:       "MEI",
+			time.June:      "JUNI",
+			time.July:      "JULI",
+			time.August:    "AGUSTUS",
+			time.September: "SEPTEMBER",
+			time.October:   "OKTOBER",
+			time.November:  "NOVEMBER",
+			time.December:  "DESEMBER",
 		}
 		monthName := indonesianMonths[t.Month()]
 
 		if row > 1 {
 			row++
 		}
+		boldStyle, _ := f.NewStyle(&excelize.Style{
+			Font: &excelize.Font{
+				Bold:   true,
+				Family: defaultFont.Family,
+				Size:   defaultFont.Size,
+			},
+		})
 
-		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), monthName)
+		monthCell := fmt.Sprintf("A%d", row)
+		f.SetCellValue(sheet, monthCell, monthName)
+		f.SetCellStyle(sheet, monthCell, monthCell, boldStyle)
 		row++
 
 		headers := []string{"Tanggal", "Durasi (Jam)", "Kegiatan"}
+		headerStyle, _ := f.NewStyle(&excelize.Style{
+			Font: &excelize.Font{
+				Bold:   true,
+				Family: defaultFont.Family,
+				Size:   defaultFont.Size,
+			},
+			Border: []excelize.Border{
+				{Type: "left", Color: "000000", Style: 1},
+				{Type: "right", Color: "000000", Style: 1},
+				{Type: "top", Color: "000000", Style: 1},
+				{Type: "bottom", Color: "000000", Style: 1},
+			},
+			Alignment: &excelize.Alignment{
+				Horizontal: "center",
+				Vertical:   "center",
+			},
+		})
 		for col, h := range headers {
 			cell, _ := excelize.CoordinatesToCellName(col+1, row)
 			f.SetCellValue(sheet, cell, h)
+			f.SetCellStyle(sheet, cell, cell, headerStyle)
+
+			f.SetColWidth(sheet, cell[:1], cell[:1], 15)
 		}
 		row++
 
 		acts := grouped[k]
+		durationStyle, _ := f.NewStyle(&excelize.Style{
+			Font: &excelize.Font{
+				Family: defaultFont.Family,
+				Size:   defaultFont.Size,
+			},
+			Alignment: &excelize.Alignment{
+				Horizontal: "center",
+				Vertical:   "center",
+			},
+		})
 
 		for _, a := range acts {
 			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), a.DateString)
@@ -153,8 +204,10 @@ func convertToExcel(activities []response.Activity, param ExportParam) (*exceliz
 				randomNumber := rand.Intn(maxDuration-minDuration+1) + minDuration
 				duration = randomNumber
 			}
+			durationCell := fmt.Sprintf("B%d", row)
 
-			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), duration)
+			f.SetCellValue(sheet, durationCell, duration)
+			f.SetCellStyle(sheet, durationCell, durationCell, durationStyle)
 			f.SetCellValue(sheet, fmt.Sprintf("C%d", row), a.ActivityDetail)
 			row++
 		}
