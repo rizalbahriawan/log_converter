@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/joho/godotenv"
 	"github.com/xuri/excelize/v2"
 )
@@ -239,7 +238,7 @@ func handleConvertToExcel(c *gin.Context) {
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Errorf("env not found")
+		fmt.Println("error getting env", err)
 		return
 	}
 	router := gin.Default()
