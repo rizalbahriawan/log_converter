@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log_cvt/dto/request"
-	"log_cvt/dto/response"
+	"log_converter/dto/request"
+	"log_converter/dto/response"
 	"math/rand"
 	"net/http"
 	"os"
@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/joho/godotenv"
 	"github.com/xuri/excelize/v2"
 )
@@ -176,10 +177,6 @@ func handleConvertToExcel(c *gin.Context) {
 		return
 	}
 
-	if err := godotenv.Load(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
 	baseURL := os.Getenv("BASE_URL")
 	loginResp, err := login(baseURL, req.Username, req.Password)
 	if err != nil {
@@ -241,8 +238,12 @@ func handleConvertToExcel(c *gin.Context) {
 }
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Errorf("env not found")
+		return
+	}
 	router := gin.Default()
 	router.POST("/convert", handleConvertToExcel)
 
-	router.Run(":8099")
+	router.Run(":" + os.Getenv("PORT"))
 }
