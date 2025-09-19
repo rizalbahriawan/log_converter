@@ -52,8 +52,8 @@ func login(baseURL, username, password string) (*response.LoginResponse, error) 
 	return &loginResp, nil
 }
 
-func fetchLogActivity(baseURL, token string, idEmployee int, month int, year int) (*response.LogActResponse, error) {
-	url := baseURL + "/log-act-detail-non-aj/table?sort=date|asc&idEmployee=" + strconv.Itoa(idEmployee) + "&months=" + strconv.Itoa(month) + "&years=" + strconv.Itoa(year)
+func fetchLogActivity(baseURL, token string, idEmployee string, month int, year int) (*response.LogActResponse, error) {
+	url := baseURL + "/log-act-detail-non-aj/table?sort=date|asc&idEmployee=" + idEmployee + "&months=" + strconv.Itoa(month) + "&years=" + strconv.Itoa(year)
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -217,8 +217,63 @@ func convertToExcel(activities []response.Activity, param ExportParam) (*exceliz
 	return f, nil
 }
 
-func handleConvertToExcel(c *gin.Context) {
-	var req request.LogConverterRequest
+func FetchProjectList(url string, token string) ([]response.ProjectResponse, error) {
+	var result []response.ProjectResponse
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return result, err
+	}
+
+	var projectResponse response.ProjectTableResponse
+	if err := json.Unmarshal(body, &projectResponse); err != nil {
+		return result, err
+	}
+	return projectResponse.Data, nil
+}
+
+func projectList(baseURL string, idEmployee string, token string) ([]string, error) {
+	result := []string{}
+	year, month, _ := time.Now().Date()
+	m := strconv.Itoa(int(month))
+	y := strconv.Itoa(int(year))
+	urlPrev := baseURL + "/project-assignment/table-for-home-prev/?sort=startDate|desc&page=1&per_page=10&employeeId=" +
+		idEmployee + "&months=" + m + "&years=" + y
+	urlCurrent := baseURL + "/project-assignment/table-for-home/?sort=startDate|desc&page=1&per_page=10&employeeId=" +
+		idEmployee + "&months=" + m + "&years=" + y
+	listPrev, err := FetchProjectList(urlPrev, token)
+	if err != nil {
+		return result, err
+	}
+	listCurrent, err := FetchProjectList(urlCurrent, token)
+	if err != nil {
+		return result, err
+	}
+	listCurrent = append(listCurrent, listPrev...)
+
+	unique := make(map[string]bool)
+	for _, p := range listCurrent {
+		unique[p.ProjectName] = true
+	}
+
+	for name := range unique {
+		result = append(result, name)
+	}
+
+	return result, nil
+}
+
+func authenticate(c *gin.Context) {
+	var req request.AuthenticateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -236,9 +291,31 @@ func handleConvertToExcel(c *gin.Context) {
 		return
 	}
 
+	projects, err := projectList(baseURL, strconv.Itoa(loginResp.UserInfo.EmployeeID), loginResp.IdToken)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"projects": projects, "token": loginResp.IdToken, "employeeId": loginResp.UserInfo.EmployeeID})
+
+}
+
+func handleConvertToExcel(c *gin.Context) {
+	var req request.LogConverterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	baseURL := os.Getenv("BASE_URL")
 	var acts []response.Activity
 	for _, month := range req.Months {
-		logResp, err := fetchLogActivity(baseURL, loginResp.IdToken, loginResp.UserInfo.EmployeeID, month, req.Year)
+		logResp, err := fetchLogActivity(baseURL, req.Token, req.EmployeeID, month, req.Year)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -257,12 +334,12 @@ func handleConvertToExcel(c *gin.Context) {
 		}
 	}
 	if !found {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Project name " + req.ProjectName + " not found"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Project name " + req.ProjectName + " not found on selected month and year"})
 		return
 	}
-	envMaxDuration := req.RandomizeLog.MaxDuration
-	if envMaxDuration != 0 {
-		maxDuration = envMaxDuration
+	reqMaxDuration := req.RandomizeLog.MaxDuration
+	if reqMaxDuration != 0 {
+		maxDuration = reqMaxDuration
 	}
 	exportParam := ExportParam{
 		projectFilter:       req.ProjectName,
@@ -295,7 +372,12 @@ func main() {
 		return
 	}
 	router := gin.Default()
-	router.POST("/convert", handleConvertToExcel)
+	router.Static("/static", "./static")
+	router.GET("/", func(c *gin.Context) {
+		c.File("./static/index.html")
+	})
+	router.POST("/api/authenticate", authenticate)
+	router.POST("/api/convert", handleConvertToExcel)
 
 	router.Run(":" + os.Getenv("PORT"))
 }

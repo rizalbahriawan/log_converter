@@ -12,3 +12,11 @@ type Activity struct {
 	Overtime       int    `json:"overtime"`
 	ProjectName    string `json:"projectName"`
 }
+
+type ProjectTableResponse struct {
+	Data []ProjectResponse `json:"data"`
+}
+
+type ProjectResponse struct {
+	ProjectName string `json:"projectName"`
+}

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  
+  <marquee><h1>Convert ESS to Timesheet Excel File</h1></marquee>
+    <form id="loginForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Username</label>
+          <input type="text" name="username" required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input type="password" name="password" required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+        </div>
+        <button type="submit"
+          class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">
+          Authenticate
+        </button>
+    </form>
+  
+<form id="myForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-4 hidden">
+    <input hidden name="idEmployee" id="idEmployee">
+    <input hidden name="token" id="token">
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Months</label>
+        <select name="months" id="months" multiple size="6"
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+          <option value="1">1 - January</option>
+          <option value="2">2 - February</option>
+          <option value="3">3 - March</option>
+          <option value="4">4 - April</option>
+          <option value="5">5 - May</option>
+          <option value="6">6 - June</option>
+          <option value="7">7 - July</option>
+          <option value="8">8 - August</option>
+          <option value="9">9 - September</option>
+          <option value="10">10 - October</option>
+          <option value="11">11 - November</option>
+          <option value="12">12 - December</option>
+        </select>
+      </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Year</label>
+      <input type="number" name="year" required
+        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Project Name</label>
+      <select name="projectName" id="projectName" required
+        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+      </select>
+    </div>
+
+    <div class="flex items-center">
+      <input type="checkbox" name="isRandomize" id="isRandomize"
+        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+      <label for="isRandomize" class="ml-2 block text-sm text-gray-700">Randomize?</label>
+    </div>
+
+    <div id="durationFields" class="hidden space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Min Duration</label>
+        <input type="number" name="minDuration"
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Max Duration</label>
+        <input type="number" name="maxDuration"
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+      </div>
+    </div>
+
+    <button type="submit"
+      class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700">
+      Submit
+    </button>
+  </form>
+
+
+</body>
+</html>
+  <script>
+    const loginForm = document.getElementById("loginForm");
+    const myForm = document.getElementById("myForm");
+
+    const authForm = document.getElementById("loginForm");
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(authForm);
+      const body = {
+        username: formData.get("username"),
+        password: formData.get("password"),
+      };
+
+      try {
+        const res = await fetch("/api/authenticate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        
+        const projectSelect = document.getElementById("projectName");
+        projectSelect.innerHTML = '<option value="">-- Select Project --</option>'; 
+
+        data.projects.forEach(p => {
+            const option = document.createElement("option");
+            option.value = p;
+            option.textContent = p;
+            projectSelect.appendChild(option);
+        })
+        document.getElementById("idEmployee").value = data.employeeId;
+        document.getElementById("token").value = data.token;
+        loginForm.classList.add("hidden");
+        myForm.classList.remove("hidden");
+        console.log(data)
+      } catch (error) {
+        alert(error)
+        console.log(error)
+      }
+    });
+
+    const form = document.getElementById("myForm");
+    // const isRandomize = document.getElementById("isRandomize");
+    const durationFields = document.getElementById("durationFields");
+
+    document.getElementById("isRandomize").addEventListener("change", (e) => {
+      document.getElementById("durationFields").classList.toggle("hidden", !e.target.checked);
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const months = Array.from(document.getElementById("months").selectedOptions).map(opt => parseInt(opt.value));
+
+      const formData = new FormData(form);
+      const body = {
+        employee_id: document.getElementById("idEmployee").value,
+        token: document.getElementById("token").value,
+        months: months,
+        year: formData.get("year") ? parseInt(formData.get("year")) : 0,
+        project_name: formData.get("projectName"),
+        randomize_log: {
+            is_random: formData.get("isRandomize") !== null,
+            min_duration: formData.get("minDuration") ? parseInt(formData.get("minDuration")) : 0,
+            max_duration: formData.get("maxDuration") ? parseInt(formData.get("maxDuration")) : 0
+        }
+      };
+
+      try {
+        const res = await fetch("/api/convert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          alert(errData.error || "Something went wrong");
+          console.error(errData);
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "timesheet.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        alert(error)
+        console.log(error)
+      }
+    });
+  </script>
