@@ -27,6 +27,13 @@ type RandomizeLogRequest struct {
 	MaxDuration int  `json:"max_duration"`
 }
 
+type ExportParam struct {
+	ProjectFilter       string
+	IsRandomizeDuration bool
+	MinDuration         int
+	MaxDuration         int
+}
+
 func (input AuthenticateRequest) Validate() error {
 	validate := validator.New()
 
