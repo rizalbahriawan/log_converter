@@ -35,7 +35,6 @@ func login(baseURL, username, password string) (*response.LoginResponse, error) 
 
 	resp, err := http.Post(baseURL+"/auth/login", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Println("Post error")
 		return nil, err
 	}
 	defer resp.Body.Close()

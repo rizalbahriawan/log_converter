@@ -113,6 +113,11 @@
         });
 
         const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || "Something went wrong");
+          return;
+        }
         
         const projectSelect = document.getElementById("projectName");
         projectSelect.innerHTML = '<option value="">-- Select Project --</option>'; 
@@ -129,13 +134,12 @@
         myForm.classList.remove("hidden");
         console.log(data)
       } catch (error) {
-        alert(error)
-        console.log(error)
+        alert("Request failed: " + error.message);
+        console.error(error);
       }
     });
 
     const form = document.getElementById("myForm");
-    // const isRandomize = document.getElementById("isRandomize");
     const durationFields = document.getElementById("durationFields");
 
     document.getElementById("isRandomize").addEventListener("change", (e) => {
