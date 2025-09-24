@@ -112,7 +112,7 @@ func handleConvertToExcel(c *gin.Context) {
 func main() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("error getting env", err)
-		return
+		// return
 	}
 	router := gin.Default()
 	router.Static("/static", "./static")
