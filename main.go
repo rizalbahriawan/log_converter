@@ -109,6 +109,26 @@ func handleConvertToExcel(c *gin.Context) {
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }
 
+func insertLogActivity(c *gin.Context) {
+	var req request.InsertLogRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	baseURL := os.Getenv("BASE_URL")
+	if err := service.ExecuteInsertLog(baseURL, req.Token, req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("error getting env", err)
@@ -121,6 +141,7 @@ func main() {
 	})
 	router.POST("/api/authenticate", authenticate)
 	router.POST("/api/convert", handleConvertToExcel)
+	router.POST("/api/log-activity", insertLogActivity)
 
 	router.Run(":" + os.Getenv("PORT"))
 }

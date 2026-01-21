@@ -230,8 +230,8 @@ func FetchProjectList(url string, token string) ([]response.ProjectResponse, err
 	return projectResponse.Data, nil
 }
 
-func ProjectList(baseURL string, idEmployee string, token string) ([]string, error) {
-	result := []string{}
+func ProjectList(baseURL string, idEmployee string, token string) ([]response.ProjectResponse, error) {
+	result := []response.ProjectResponse{}
 	year, month, _ := time.Now().Date()
 	m := strconv.Itoa(int(month))
 	y := strconv.Itoa(int(year))
@@ -249,14 +249,62 @@ func ProjectList(baseURL string, idEmployee string, token string) ([]string, err
 	}
 	listCurrent = append(listCurrent, listPrev...)
 
-	unique := make(map[string]bool)
-	for _, p := range listCurrent {
-		unique[p.ProjectName] = true
-	}
+	// unique := make(map[string]bool)
+	// for _, p := range listCurrent {
+	// 	unique[p.ProjectName] = true
+	// }
 
-	for name := range unique {
-		result = append(result, name)
+	// for name := range unique {
+	// 	result = append(result, name)
+	// }
+
+	seen := make(map[string]bool)
+	result = make([]response.ProjectResponse, 0, len(listCurrent))
+
+	for _, p := range listCurrent {
+		if !seen[p.ProjectName] {
+			seen[p.ProjectName] = true
+			result = append(result, p)
+		}
 	}
 
 	return result, nil
+}
+
+func ExecuteInsertLog(baseURL string, token string, reqBody request.InsertLogRequest) error {
+	reqBody.Token = ""
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		baseURL+"/log-act-detail-non-aj",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"fetch failed, status: %s, body: %s",
+			resp.Status,
+			string(respBody),
+		)
+	}
+
+	return nil
 }

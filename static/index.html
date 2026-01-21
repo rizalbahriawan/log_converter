@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log Converter</title>
   <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
 </head>
 <body class="bg-gray-100 min-h-screen p-4">
-  
-  <marquee><h1>Convert ESS to Timesheet Excel File</h1></marquee>
+   
+  <!-- <marquee><h1>KILIL (KERJAAN ITU LAGI ITU LAGI)</h1></marquee> -->
     <form id="loginForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-6">
         <div>
           <label class="block text-sm font-medium text-gray-700">Username</label>
@@ -26,171 +28,572 @@
           Authenticate
         </button>
     </form>
+
+    <div class="w-full max-w-xl bg-white rounded-lg shadow hidden" style="min-width: 1500px" id="dashboard">
+      <div class="flex border-b">
+        <button
+          id="tab1Btn"
+          onclick="showTab(1)"
+          class="flex-1 px-4 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600"
+        >
+          Convert ESS
+        </button>
+        <button
+          id="tab2Btn"
+          onclick="showTab(2)"
+          class="flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
+        >
+          Add Bulk ESS
+        </button>
+        <button
+          id="tab3Btn"
+          onclick="showTab(3)"
+          class="flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
+        >
+          Reserved for Future Feature
+        </button>
+      </div>
+      <!-- Form A -->
+      <div id="tab1" class="p-6">
+        <h2 class="text-lg font-semibold mb-4">Convert ESS to Timesheet Excel File</h2>
+        <form id="convertEssForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-4">
+          <input hidden name="idEmployee" id="idEmployee">
+          <input hidden name="token" id="token">
+
+          <div> 
+              <label class="block text-sm font-medium text-gray-700">Months</label>
+              <select name="months" id="months" multiple size="6"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value=1>1 - January</option>
+                <option value=2>2 - February</option>
+                <option value=3>3 - March</option>
+                <option value=4>4 - April</option>
+                <option value=5>5 - May</option>
+                <option value=6>6 - June</option>
+                <option value=7>7 - July</option>
+                <option value=8>8 - August</option>
+                <option value=9>9 - September</option>
+                <option value=10>10 - October</option>
+                <option value=11>11 - November</option>
+                <option value=12>12 - December</option>
+              </select>
+            </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Year</label>
+            <input type="number" name="year" required
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Project Name</label>
+            <select name="projectName" id="projectName" required
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </select>
+          </div>
+
+          <div class="flex items-center">
+            <input type="checkbox" name="isRandomize" id="isRandomize"
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <label for="isRandomize" class="ml-2 block text-sm text-gray-700">Randomize?</label>
+          </div>
+
+          <div id="durationFields" class="hidden space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Min Duration</label>
+              <input type="number" name="minDuration"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Max Duration</label>
+              <input type="number" name="maxDuration"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <button type="submit"
+            class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700">
+            Submit
+          </button>
+        </form>
+      </div>
+
+      <!-- Form B -->
+      <div id="tab2" class="p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Bulk ESS Log with Excel</h2>
+
+        <form id="essBulkForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-4" style="min-width: 1400px">
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Mandays:</label>
+              <select id="mandays" class="border border-gray-300 rounded px-4 py-2 w-48">
+              </select>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border border-gray-300 px-4 py-2 text-left">#</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left" style="max-width: 200px">Project Name</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Day</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Location</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Hours</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Overtime</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left" style="min-width: 400px">Activity</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+          </div>
+
+          <button type="button" id="addRow" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+              Add Row
+          </button>
+          <button type="submit" id="submitBtn" class="mt-4 ml-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+              Submit Log
+          </button>
+          
+          <div id="submitStatus" class="mt-4 hidden">
+              <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+                  <span id="statusMessage">Processing...</span>
+              </div>
+          </div>
+        </form>
+        
+      </div>
+      <div id="tab3" class="p-6 hidden">
+        <h2 class="text-lg font-semibold mb-4">Reserved for Future Feature</h2>
+        <p>This section is reserved for future enhancements and features.</p>
+      </div>
+    </div>
+    
   
-<form id="myForm" class="w-full max-w-md bg-white p-6 rounded-lg shadow space-y-4 hidden">
-    <input hidden name="idEmployee" id="idEmployee">
-    <input hidden name="token" id="token">
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700">Months</label>
-        <select name="months" id="months" multiple size="6"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-          <option value="1">1 - January</option>
-          <option value="2">2 - February</option>
-          <option value="3">3 - March</option>
-          <option value="4">4 - April</option>
-          <option value="5">5 - May</option>
-          <option value="6">6 - June</option>
-          <option value="7">7 - July</option>
-          <option value="8">8 - August</option>
-          <option value="9">9 - September</option>
-          <option value="10">10 - October</option>
-          <option value="11">11 - November</option>
-          <option value="12">12 - December</option>
-        </select>
-      </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Year</label>
-      <input type="number" name="year" required
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Project Name</label>
-      <select name="projectName" id="projectName" required
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-      </select>
-    </div>
-
-    <div class="flex items-center">
-      <input type="checkbox" name="isRandomize" id="isRandomize"
-        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-      <label for="isRandomize" class="ml-2 block text-sm text-gray-700">Randomize?</label>
-    </div>
-
-    <div id="durationFields" class="hidden space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Min Duration</label>
-        <input type="number" name="minDuration"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Max Duration</label>
-        <input type="number" name="maxDuration"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-      </div>
-    </div>
-
-    <button type="submit"
-      class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700">
-      Submit
-    </button>
-  </form>
 
 
 </body>
 </html>
-  <script>
-    const loginForm = document.getElementById("loginForm");
-    const myForm = document.getElementById("myForm");
+<script> 
+  const loginForm = $("#loginForm"); 
+  const convertEssForm = $("#convertEssForm");
+  const essBulkForm = $("#essBulkForm");
+  const mandays = $("#mandays");
+  let projects = [];
 
-    const authForm = document.getElementById("loginForm");
-    authForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  for (let i = 1; i <= 30; i++) {
+      mandays.append(`<option value="${i}">${i}</option>`);
+  }
+  mandays.val(1);
+  
+  // Generate initial rows
+  // generateRows(1);
 
-      const formData = new FormData(authForm);
-      const body = {
-        username: formData.get("username"),
-        password: formData.get("password"),
-      };
+  mandays.on('change', function() {
+      const count = parseInt($(this).val());
+      generateRows(count);
+  });
 
-      try {
-        const res = await fetch("/api/authenticate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
-        });
+  $(document).on('change', '#tableBody tr:first .date-input', function() {
+      updateDatesFromFirst();
+  });
 
-        const data = await res.json();
+  $(document).on('change', '.date-input', function() {
+      const dateValue = $(this).val();
+      if (dateValue) {
+          const date = new Date(dateValue);
+          $(this).closest('tr').find('.day-name').text(getDayName(date));
+          
+          // If it's the first row, update all subsequent rows
+          if ($(this).closest('tr').index() === 0) {
+              updateDatesFromFirst();
+          }
+      }
+  });
+  
+  
+  // Remove row event
+  $(document).on('click', '.remove-row', function() {
+      $(this).closest('tr').remove();
+      updateRowIndices();
+  });
+  
+  // Add row event
+  $('#addRow').on('click', function() {
+      const rowCount = $('#tableBody tr').length;
+      let newDate;
+      
+      if (rowCount > 0) {
+          const lastDateInput = $('#tableBody tr:last .date-input');
+          const lastDate = new Date(lastDateInput.val());
+          newDate = getNextWeekday(lastDate);
+      } else {
+          newDate = getPreviousWeekdayFrom20th();
+      }
+      
+      $('#tableBody').append(createRow(rowCount + 1, newDate));
+  });
+  
+  loginForm.on("submit", async (e) => {
+    e.preventDefault();
 
-        if (!res.ok) {
-          alert(data.error || "Something went wrong");
-          return;
-        }
+    const formData = new FormData(e.currentTarget); 
+    const body = {
+      username: formData.get("username"),
+      password: formData.get("password"),
+    };
+
+    try {
+      const res = await fetch("/api/authenticate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Something went wrong");
+        return;
+      }
         
-        const projectSelect = document.getElementById("projectName");
-        projectSelect.innerHTML = '<option value="">-- Select Project --</option>'; 
+      const projectSelect = $("#projectName");
+      projectSelect.html('<option value="">-- Select Project --</option>');
 
-        data.projects.forEach(p => {
-            const option = document.createElement("option");
-            option.value = p;
-            option.textContent = p;
-            projectSelect.appendChild(option);
-        })
-        document.getElementById("idEmployee").value = data.employeeId;
-        document.getElementById("token").value = data.token;
-        loginForm.classList.add("hidden");
-        myForm.classList.remove("hidden");
-        console.log(data)
-      } catch (error) {
-        alert("Request failed: " + error.message);
-        console.error(error);
+      projects = data.projects;
+      data.projects.forEach(p => {
+        projectSelect.append(
+          $("<option>", {
+            value: p.projectName,
+            text: p.projectName
+          })
+        );
+      });
+      $("#idEmployee").val(data.employeeId);
+      $("#token").val(data.token);
+      loginForm.addClass("hidden"); 
+      $('#dashboard').removeClass("hidden");
+      generateRows(parseInt(mandays.val()));
+    
+      console.log(data)
+    } catch (error) {
+      alert("Request failed: " + error.message);
+      console.error(error);
+    }
+  });
+
+  function showTab(tab) {
+    $("#tab1").addClass('hidden')
+    $("#tab2").addClass('hidden')
+    $("#tab3").addClass('hidden')
+
+    $("#tab1Btn").removeClass('border-blue-600', 'text-blue-600')
+    $("#tab2Btn").removeClass('border-blue-600', 'text-blue-600')
+    $("#tab3Btn").removeClass('border-blue-600', 'text-blue-600')
+    if (tab === 1) {
+      $("#tab1").removeClass('hidden')
+      $("#tab1Btn").addClass('border-blue-600', 'text-blue-600')
+    } else if (tab === 2) {
+      $("#tab2").removeClass('hidden')
+      $("#tab2Btn").addClass('border-blue-600', 'text-blue-600')
+    } else if (tab === 3) {
+      $("#tab3").removeClass('hidden')
+      $("#tab3Btn").addClass('border-blue-600', 'text-blue-600')
+    }
+  }
+
+  const durationFields = $("#durationFields");
+
+  $("#isRandomize").on("change", (e) => {
+    $("#durationFields").toggleClass("hidden", !e.target.checked);
+  });
+
+  convertEssForm.on("submit", async (e) => {
+    e.preventDefault();
+    const inputMonths = $("#months").val();
+    const months = Array.from(inputMonths).map(opt => parseInt(opt));
+
+    const formData = new FormData(e.currentTarget);
+    const body = {
+      employee_id: $("#idEmployee").val(),
+      token: $("#token").val(),
+      months: months,
+      year: formData.get("year") ? parseInt(formData.get("year")) : 0,
+      project_name: formData.get("projectName"),
+      randomize_log: {
+          is_random: formData.get("isRandomize") !== null,
+          min_duration: formData.get("minDuration") ? parseInt(formData.get("minDuration")) : 0,
+          max_duration: formData.get("maxDuration") ? parseInt(formData.get("maxDuration")) : 0
       }
-    });
+    };
 
-    const form = document.getElementById("myForm");
-    const durationFields = document.getElementById("durationFields");
+    try {
+      const res = await fetch("/api/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+      });
 
-    document.getElementById("isRandomize").addEventListener("change", (e) => {
-      document.getElementById("durationFields").classList.toggle("hidden", !e.target.checked);
-    });
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || "Something went wrong");
+        console.error(errData);
+        return;
+      }
 
-    form.addEventListener("submit", async (e) => {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const $a = $("<a>", {
+        href: url,
+        download: "timesheet.xlsx"
+      }).appendTo("body");
+
+      $a[0].click();
+      $a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error)
+      console.log(error)
+    }
+  });
+
+  function isWeekday(date) {
+      const day = date.getDay();
+      return day !== 0 && day !== 6;
+  }
+
+  function getNextWeekday(date) {
+      const next = new Date(date);
+      next.setDate(next.getDate() + 1);
+      while (!isWeekday(next)) {
+          next.setDate(next.getDate() + 1);
+      }
+      return next;
+  }
+
+  function getPreviousWeekdayFrom20th() {
+      const today = new Date();
+      const year = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+      const month = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+      
+      let date = new Date(year, month, 20);
+      
+      while (!isWeekday(date)) {
+          date.setDate(date.getDate() + 1);
+      }
+      
+      return date;
+  }
+
+  function getDayName(date) {
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      return days[date.getDay()];
+  }
+
+  function formatDateToISO(dateString) {
+      const date = new Date(dateString);
+      date.setHours(8, 22, 0, 0);
+      return date.toISOString();
+  }
+  
+  function formatDateToPurchase(dateString) {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+  }
+  
+  function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+  }
+
+  function getMonthFromDate(dateString) {
+      const date = new Date(dateString);
+      return date.getMonth() + 1;
+  }
+  
+  function getYearFromDate(dateString) {
+      const date = new Date(dateString);
+      return date.getFullYear();
+  }
+
+  function createRow(index, date) {
+      const projectOptions = projects.map(p => 
+          `<option value='${JSON.stringify(p)}'>${p.projectName}</option>`
+      ).join('');
+      
+      const dayName = getDayName(date);
+      return `
+          <tr>
+              <td class="border border-gray-300 px-4 py-2">${index}</td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <select class="w-full border-gray-300 rounded px-2 py-1 project-select">
+                      ${projectOptions}
+                  </select>
+              </td>
+             <td class="border border-gray-300 px-4 py-2">
+                  <span class="day-name">${dayName}</span>
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <input type="date" class="w-full border-gray-300 rounded px-2 py-1 date-input" value="${formatDate(date)}">
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <select class="w-full border-gray-300 rounded px-2 py-1 location-select">
+                      <option value="WFO" selected>WFO</option>
+                      <option value="WFH">WFH</option>
+                  </select>
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <input type="number" class="w-full border-gray-300 rounded px-2 py-1 hours-input" value="8" min="0" max="24">
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <input type="number" class="w-full border-gray-300 rounded px-2 py-1 overtime-input" value="0" min="0" max="24">
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <textarea class="w-full border-gray-300 rounded px-2 py-1 activity-input" placeholder="Log"></textarea>
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                  <button class="remove-row bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Remove</button>
+              </td>
+          </tr>
+      `;
+  }
+
+  function updateRowIndices() {
+      $('#tableBody tr').each(function(index) {
+          $(this).find('td:first').text(index + 1);
+      });
+  }
+  
+  function generateRows(count) {
+      $('#tableBody').empty();
+      
+      if (count > 0) {
+          let currentDate = getPreviousWeekdayFrom20th();
+          
+          for (let i = 1; i <= count; i++) {
+              $('#tableBody').append(createRow(i, currentDate));
+              currentDate = getNextWeekday(currentDate);
+          }
+      }
+  }
+  
+  function updateDatesFromFirst() {
+      const rows = $('#tableBody tr');
+      if (rows.length === 0) return;
+      
+      const firstDateInput = rows.first().find('.date-input');
+      const firstDate = new Date(firstDateInput.val());
+      
+      if (isNaN(firstDate.getTime())) return;
+      
+      let currentDate = firstDate;
+      
+      rows.each(function(index) {
+          if (index === 0) return;
+          
+          currentDate = getNextWeekday(currentDate);
+          $(this).find('.date-input').val(formatDate(currentDate));
+      });
+  }
+
+  
+  essBulkForm.on("submit", async (e) => {
       e.preventDefault();
-      const months = Array.from(document.getElementById("months").selectedOptions).map(opt => parseInt(opt.value));
-
-      const formData = new FormData(form);
-      const body = {
-        employee_id: document.getElementById("idEmployee").value,
-        token: document.getElementById("token").value,
-        months: months,
-        year: formData.get("year") ? parseInt(formData.get("year")) : 0,
-        project_name: formData.get("projectName"),
-        randomize_log: {
-            is_random: formData.get("isRandomize") !== null,
-            min_duration: formData.get("minDuration") ? parseInt(formData.get("minDuration")) : 0,
-            max_duration: formData.get("maxDuration") ? parseInt(formData.get("maxDuration")) : 0
-        }
-      };
-
-      try {
-        const res = await fetch("/api/convert", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          alert(errData.error || "Something went wrong");
-          console.error(errData);
+      const rows = $('#tableBody tr');
+      if (rows.length === 0) {
+          alert('No activities to submit');
           return;
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "timesheet.xlsx";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        alert(error)
-        console.log(error)
       }
-    });
-  </script>
+      
+      $('#submitBtn').prop('disabled', true);
+      $('#submitStatus').removeClass('hidden');
+      $('#statusMessage').text('Processing...');
+      
+      let successCount = 0;
+      let failCount = 0;
+      let errorMessages = [];
+      
+      for (let i = 0; i < rows.length; i++) {
+          const row = $(rows[i]);
+          
+          const idEmployee= $("#idEmployee").val();
+          const token = $("#token").val();
+          const projectSelect = row.find('.project-select');
+          const projectData = JSON.parse(projectSelect.val());
+          const projectAssignId = parseInt(projectData.id);
+          const projectId = parseInt(projectData.projectId);
+          const projectName = projectData.projectName;
+          const dateValue = row.find('.date-input').val();
+          const workingMode = row.find('.location-select').val();
+          const duration = parseInt(row.find('.hours-input').val()) || 0;
+          const overtime = parseInt(row.find('.overtime-input').val()) || 0;
+          const activityDetail = row.find('.activity-input').val() || '';
+          
+          const payload = {
+              idEmployee: idEmployee,
+              token: token,
+              date: formatDateToISO(dateValue),
+              activityDetail: activityDetail,
+              duration: duration,
+              overtime: overtime,
+              projectAssignId: projectAssignId,
+              projectId: projectId,
+              projectName: projectName,
+              months: getMonthFromDate(dateValue),
+              years: getYearFromDate(dateValue),
+              workingMode: workingMode,
+              purchaseDateString: formatDateToPurchase(dateValue)
+          };
+          
+          try {
+              $('#statusMessage').text(`Submitting activity ${i + 1} of ${rows.length}...`);
+              
+              const res = await fetch('/api/log-activity', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload)
+              });
+              
+              const data = await res.json();
+              
+              if (!res.ok) {
+                  console.error(`Error submitting row ${i + 1}:`, data.error || 'Unknown error');
+                  errorMessages.push(`Row ${i + 1}: ${data.error || 'Unknown error'}`);
+                  failCount++;
+              } else {
+                  successCount++;
+              }
+          } catch (error) {
+              console.error(`Error submitting row ${i + 1}:`, error);
+              errorMessages.push(`Row ${i + 1}: ${data.error || 'Unknown error'}`);
+              failCount++;
+          }
+      }
+      
+      $('#submitBtn').prop('disabled', false);
+      
+      if (failCount === 0) {
+          $('#submitStatus').find('div').removeClass('bg-blue-100 border-blue-400 text-blue-700')
+              .addClass('bg-green-100 border-green-400 text-green-700');
+          $('#statusMessage').text(`Successfully submitted all ${successCount} activities!`);
+      } else {
+          $('#submitStatus').find('div').removeClass('bg-blue-100 border-blue-400 text-blue-700')
+              .addClass('bg-yellow-100 border-yellow-400 text-yellow-700');
+          $('#statusMessage').text(`Submitted ${successCount} activities successfully, ${failCount} failed. Errors are. ${errorMessages.join('. ')}`);
+      }
+      
+      setTimeout(() => {
+          $('#submitStatus').addClass('hidden');
+          $('#submitStatus').find('div').removeClass('bg-green-100 border-green-400 text-green-700 bg-yellow-100 border-yellow-400 text-yellow-700')
+              .addClass('bg-blue-100 border-blue-400 text-blue-700');
+      }, 50000);
+  })
+
+</script>

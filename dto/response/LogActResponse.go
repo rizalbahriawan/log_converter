@@ -18,5 +18,7 @@ type ProjectTableResponse struct {
 }
 
 type ProjectResponse struct {
+	Id          int    `json:"id"`
+	ProjectId   int    `json:"projectId"`
 	ProjectName string `json:"projectName"`
 }
