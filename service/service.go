@@ -249,15 +249,6 @@ func ProjectList(baseURL string, idEmployee string, token string) ([]response.Pr
 	}
 	listCurrent = append(listCurrent, listPrev...)
 
-	// unique := make(map[string]bool)
-	// for _, p := range listCurrent {
-	// 	unique[p.ProjectName] = true
-	// }
-
-	// for name := range unique {
-	// 	result = append(result, name)
-	// }
-
 	seen := make(map[string]bool)
 	result = make([]response.ProjectResponse, 0, len(listCurrent))
 

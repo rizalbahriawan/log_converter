@@ -168,6 +168,15 @@
         <p>This section is reserved for future enhancements and features.</p>
       </div>
     </div>
+    <div class="row text-end">
+      <button
+        id="logoutBtn"
+        onclick="logout()"
+        class="text-end my-4 ml-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+      >
+        Logout
+      </button>
+    </div>
     
   
 
@@ -191,12 +200,22 @@
 
   mandays.on('change', function() {
       const count = parseInt($(this).val());
+      const firstProject = $('#tableBody tr:first .project-select').val();
       generateRows(count);
+      
+      if (firstProject) {
+        $('#tableBody tr:first .project-select').val(firstProject);
+        applyFirstRowProjectToAll();
+    }
   });
 
   $(document).on('change', '#tableBody tr:first .date-input', function() {
       updateDatesFromFirst();
   });
+
+  $(document).on('change', '#tableBody tr:first .project-select', function() {
+    applyFirstRowProjectToAll();
+});
 
   $(document).on('change', '.date-input', function() {
       const dateValue = $(this).val();
@@ -274,11 +293,51 @@
       loginForm.addClass("hidden"); 
       $('#dashboard').removeClass("hidden");
       generateRows(parseInt(mandays.val()));
-    
-      console.log(data)
+      
+      // Store data in localStorage
+      localStorage.setItem("projects", JSON.stringify(data.projects));
+      localStorage.setItem("employeeId", data.employeeId);
+      localStorage.setItem("token", data.token);
     } catch (error) {
       alert("Request failed: " + error.message);
       console.error(error);
+    }
+  });
+
+  
+  $(document).ready(function () {
+    const token = localStorage.getItem("token");
+    const employeeId = localStorage.getItem("employeeId");
+    const storedProjects = localStorage.getItem("projects");
+
+    if (token) {
+      $("#token").val(token);
+    }
+    
+    if (employeeId) {
+      $("#idEmployee").val(employeeId);
+    }
+
+    if (storedProjects) {
+      projects = JSON.parse(storedProjects);
+
+      // restore project dropdown
+      const projectSelect = $("#projectName");
+      projectSelect.html('<option value="">-- Select Project --</option>');
+      projects.forEach(p => {
+        projectSelect.append(
+          $("<option>", {
+            value: p.projectName,
+            text: p.projectName
+          })
+        );
+      });
+
+      // skip login
+      loginForm.addClass("hidden");
+      $('#dashboard').removeClass("hidden");
+
+      generateRows(parseInt(mandays.val()));
     }
   });
 
@@ -312,11 +371,13 @@
     e.preventDefault();
     const inputMonths = $("#months").val();
     const months = Array.from(inputMonths).map(opt => parseInt(opt));
+    const token = $("#token").val() || localStorage.getItem("token");
+    const idEmployee = $("#idEmployee").val() || localStorage.getItem("employeeId");
 
     const formData = new FormData(e.currentTarget);
     const body = {
-      employee_id: $("#idEmployee").val(),
-      token: $("#token").val(),
+      employee_id: idEmployee,
+      token: token,
       months: months,
       year: formData.get("year") ? parseInt(formData.get("year")) : 0,
       project_name: formData.get("projectName"),
@@ -359,15 +420,47 @@
     }
   });
 
-  function isWeekday(date) {
-      const day = date.getDay();
-      return day !== 0 && day !== 6;
+  //helper functions
+  const holidays = new Set([
+    "2026-01-01",
+    "2026-01-16",
+    "2026-02-17",
+    "2026-03-19",
+    "2026-03-21",
+    "2026-03-22",
+    "2026-04-03",
+    "2026-04-05",
+    "2026-05-01",
+    "2026-05-14",
+    "2026-05-27",
+    "2026-05-31",
+    "2026-06-01",
+    "2026-06-16",
+    "2026-08-17",
+    "2026-08-25",
+    "2026-12-25"
+  ]);
+
+  function isHoliday(date) {
+    const isoDate = date.toISOString().split('T')[0];
+    return holidays.has(isoDate);
   }
+
+  function isWorkingDay(date) {
+    const day = date.getDay();
+    const isWeekend = (day === 0 || day === 6);
+    return !isWeekend && !isHoliday(date);
+  }
+
+  // function isWeekday(date) {
+  //     const day = date.getDay();
+  //     return day !== 0 && day !== 6;
+  // }
 
   function getNextWeekday(date) {
       const next = new Date(date);
       next.setDate(next.getDate() + 1);
-      while (!isWeekday(next)) {
+      while (!isWorkingDay(next)) {
           next.setDate(next.getDate() + 1);
       }
       return next;
@@ -380,7 +473,7 @@
       
       let date = new Date(year, month, 20);
       
-      while (!isWeekday(date)) {
+      while (!isWorkingDay(date)) {
           date.setDate(date.getDate() + 1);
       }
       
@@ -500,8 +593,19 @@
           
           currentDate = getNextWeekday(currentDate);
           $(this).find('.date-input').val(formatDate(currentDate));
+          $(this).find('.day-name').text(getDayName(currentDate));
       });
   }
+
+  function applyFirstRowProjectToAll() {
+    const firstProject = $('#tableBody tr:first .project-select').val();
+    if (!firstProject) return;
+
+    $('#tableBody tr').each(function(index) {
+        if (index === 0) return;
+        $(this).find('.project-select').val(firstProject);
+    });
+}
 
   
   essBulkForm.on("submit", async (e) => {
@@ -519,12 +623,13 @@
       let successCount = 0;
       let failCount = 0;
       let errorMessages = [];
+
+      const token = $("#token").val() || localStorage.getItem("token");
+      const idEmployee = $("#idEmployee").val() || localStorage.getItem("employeeId");
       
       for (let i = 0; i < rows.length; i++) {
           const row = $(rows[i]);
           
-          const idEmployee= $("#idEmployee").val();
-          const token = $("#token").val();
           const projectSelect = row.find('.project-select');
           const projectData = JSON.parse(projectSelect.val());
           const projectAssignId = parseInt(projectData.id);
@@ -595,5 +700,10 @@
               .addClass('bg-blue-100 border-blue-400 text-blue-700');
       }, 50000);
   })
+
+  function logout() {
+    localStorage.clear();
+    location.reload();
+  }
 
 </script>
