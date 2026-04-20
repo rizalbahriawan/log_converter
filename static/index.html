@@ -298,6 +298,7 @@
       localStorage.setItem("projects", JSON.stringify(data.projects));
       localStorage.setItem("employeeId", data.employeeId);
       localStorage.setItem("token", data.token);
+      $("#logoutBtn").removeClass("hidden");
     } catch (error) {
       alert("Request failed: " + error.message);
       console.error(error);
@@ -312,6 +313,8 @@
 
     if (token) {
       $("#token").val(token);
+    } else {
+      $("#logoutBtn").addClass("hidden");
     }
     
     if (employeeId) {
@@ -704,6 +707,7 @@
 
   function logout() {
     localStorage.clear();
+    $("#logoutBtn").addClass("hidden");
     location.reload();
   }
 
