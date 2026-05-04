@@ -34,21 +34,21 @@
         <button
           id="tab1Btn"
           onclick="showTab(1)"
-          class="flex-1 px-4 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600"
+          class="tabBtn flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
         >
           Convert ESS
         </button>
         <button
           id="tab2Btn"
           onclick="showTab(2)"
-          class="flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
+          class="tabBtn flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
         >
           Add Bulk ESS
         </button>
         <button
           id="tab3Btn"
           onclick="showTab(3)"
-          class="flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
+          class="tabBtn flex-1 px-4 py-3 text-center font-medium text-gray-500 hover:text-blue-600"
         >
           Reserved for Future Feature
         </button>
@@ -183,6 +183,9 @@
 
 </body>
 </html>
+<style>
+  .highlight { color: blue; font-weight: bold; border-bottom: blue solid 1px;}
+</style>
 <script> 
   const loginForm = $("#loginForm"); 
   const convertEssForm = $("#convertEssForm");
@@ -299,6 +302,7 @@
       localStorage.setItem("employeeId", data.employeeId);
       localStorage.setItem("token", data.token);
       $("#logoutBtn").removeClass("hidden");
+      this.showTab(1)
     } catch (error) {
       alert("Request failed: " + error.message);
       console.error(error);
@@ -345,22 +349,23 @@
   });
 
   function showTab(tab) {
-    $("#tab1").addClass('hidden')
-    $("#tab2").addClass('hidden')
-    $("#tab3").addClass('hidden')
+    $("#tab1, #tab2, #tab3").addClass('hidden')
 
-    $("#tab1Btn").removeClass('border-blue-600', 'text-blue-600')
-    $("#tab2Btn").removeClass('border-blue-600', 'text-blue-600')
-    $("#tab3Btn").removeClass('border-blue-600', 'text-blue-600')
+    // $(".tabBtn").removeClass('border-blue-600 text-blue-600')
+    $(".tabBtn").removeClass('highlight')
     if (tab === 1) {
       $("#tab1").removeClass('hidden')
-      $("#tab1Btn").addClass('border-blue-600', 'text-blue-600')
+      $("#tab1Btn").addClass('highlight')
+      // $("#tab1Btn").addClass('border-blue-600 text-blue-600')
     } else if (tab === 2) {
       $("#tab2").removeClass('hidden')
-      $("#tab2Btn").addClass('border-blue-600', 'text-blue-600')
+      
+      $("#tab2Btn").addClass('highlight')
+      // $("#tab2Btn").addClass('border-blue-600 text-blue-600')
     } else if (tab === 3) {
       $("#tab3").removeClass('hidden')
-      $("#tab3Btn").addClass('border-blue-600', 'text-blue-600')
+      $("#tab3Btn").addClass('highlight')
+      // $("#tab3Btn").addClass('border-blue-600 text-blue-600')
     }
   }
 
